@@ -32,23 +32,46 @@ export const ValentineCard: React.FC = () => {
     const padding = 20; 
 
     // Estimate max potential width of the button with long text to prevent clipping
-    // (assuming approx 250px is enough for "Don't like this baooo?")
     const estimatedMaxWidth = 280; 
     const effectiveWidth = Math.max(btnWidth, estimatedMaxWidth);
 
-    // Calculate available space
+    // Calculate available space boundaries
     const minX = padding;
     const maxX = viewportWidth - effectiveWidth - padding;
-    
     const minY = padding;
     const maxY = viewportHeight - btnHeight - padding;
-
+    
     // Ensure we have valid ranges even on small screens
     const safeMaxX = Math.max(minX, maxX);
     const safeMaxY = Math.max(minY, maxY);
 
-    const newX = Math.random() * (safeMaxX - minX) + minX;
-    const newY = Math.random() * (safeMaxY - minY) + minY;
+    // Define Avoidance Zone (Center of screen where content usually is)
+    // Roughly 300px wide, 500px tall in the center
+    const centerX = viewportWidth / 2;
+    const centerY = viewportHeight / 2;
+    const avoidRadiusX = 180; 
+    const avoidRadiusY = 250;
+
+    let newX = 0;
+    let newY = 0;
+    let attempts = 0;
+    const maxAttempts = 50;
+
+    // Try to find a spot that is NOT in the center
+    do {
+      newX = Math.random() * (safeMaxX - minX) + minX;
+      newY = Math.random() * (safeMaxY - minY) + minY;
+      
+      // Check if inside the avoidance box
+      const inAvoidanceZone = 
+        newX + effectiveWidth > centerX - avoidRadiusX &&
+        newX < centerX + avoidRadiusX &&
+        newY + btnHeight > centerY - avoidRadiusY &&
+        newY < centerY + avoidRadiusY;
+
+      if (!inAvoidanceZone) break;
+      attempts++;
+    } while (attempts < maxAttempts);
 
     setNoBtnPosition({ x: newX, y: newY });
     setIsHoveringNo(true);
@@ -94,7 +117,7 @@ export const ValentineCard: React.FC = () => {
         </div>
 
         {/* Text Section */}
-        <div className="mb-8 drop-shadow-sm">
+        <div className="mb-8 drop-shadow-sm select-none">
           {!isAccepted ? (
             <h1 className="font-script text-5xl md:text-7xl text-valentine-600 mb-4 animate-float font-bold drop-shadow-lg">
               {TEXTS.QUESTION}
@@ -128,6 +151,7 @@ export const ValentineCard: React.FC = () => {
               ref={noBtnRef}
               onMouseEnter={moveNoButton}
               onTouchStart={(e) => {
+                 e.preventDefault(); // Prevent accidental clicks on mobile
                  moveNoButton();
               }}
               onClick={moveNoButton}
@@ -145,7 +169,7 @@ export const ValentineCard: React.FC = () => {
               }
               className={`
                 px-8 py-4 bg-white text-valentine-600 border-2 border-valentine-200 font-bold rounded-full text-xl shadow-xl 
-                z-50 cursor-pointer whitespace-nowrap
+                z-50 cursor-pointer whitespace-nowrap touch-none
                 ${isHoveringNo ? '' : 'hover:bg-gray-50'}
               `}
             >
