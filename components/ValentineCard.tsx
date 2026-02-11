@@ -19,59 +19,32 @@ export const ValentineCard: React.FC = () => {
   const moveNoButton = useCallback(() => {
     if (!noBtnRef.current) return;
 
-    // Get current dimensions
-    const btnRect = noBtnRef.current.getBoundingClientRect();
-    const btnWidth = btnRect.width;
-    const btnHeight = btnRect.height;
-
     // Viewport dimensions
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // Safe padding to keep button well inside screen
-    const padding = 20; 
+    // Button dimensions
+    // We assume a max width to prevent overflow even if text changes
+    const estimatedBtnWidth = 150; // Roughly the size of the button with text
+    const btnHeight = 50;
+    const padding = 20;
 
-    // Estimate max potential width of the button with long text to prevent clipping
-    const estimatedMaxWidth = 280; 
-    const effectiveWidth = Math.max(btnWidth, estimatedMaxWidth);
-
-    // Calculate available space boundaries
+    // Calculate strict boundaries
+    // X: [padding, viewportWidth - estimatedBtnWidth - padding]
     const minX = padding;
-    const maxX = viewportWidth - effectiveWidth - padding;
+    const maxX = viewportWidth - estimatedBtnWidth - padding;
+    
+    // Y: [padding, viewportHeight - btnHeight - padding]
     const minY = padding;
     const maxY = viewportHeight - btnHeight - padding;
-    
-    // Ensure we have valid ranges even on small screens
-    const safeMaxX = Math.max(minX, maxX);
-    const safeMaxY = Math.max(minY, maxY);
 
-    // Define Avoidance Zone (Center of screen where content usually is)
-    // Roughly 300px wide, 500px tall in the center
-    const centerX = viewportWidth / 2;
-    const centerY = viewportHeight / 2;
-    const avoidRadiusX = 180; 
-    const avoidRadiusY = 250;
+    // Ensure range is valid (min <= max)
+    const effectiveMaxX = Math.max(minX, maxX);
+    const effectiveMaxY = Math.max(minY, maxY);
 
-    let newX = 0;
-    let newY = 0;
-    let attempts = 0;
-    const maxAttempts = 50;
-
-    // Try to find a spot that is NOT in the center
-    do {
-      newX = Math.random() * (safeMaxX - minX) + minX;
-      newY = Math.random() * (safeMaxY - minY) + minY;
-      
-      // Check if inside the avoidance box
-      const inAvoidanceZone = 
-        newX + effectiveWidth > centerX - avoidRadiusX &&
-        newX < centerX + avoidRadiusX &&
-        newY + btnHeight > centerY - avoidRadiusY &&
-        newY < centerY + avoidRadiusY;
-
-      if (!inAvoidanceZone) break;
-      attempts++;
-    } while (attempts < maxAttempts);
+    // Random position
+    let newX = Math.random() * (effectiveMaxX - minX) + minX;
+    let newY = Math.random() * (effectiveMaxY - minY) + minY;
 
     setNoBtnPosition({ x: newX, y: newY });
     setIsHoveringNo(true);
@@ -87,12 +60,12 @@ export const ValentineCard: React.FC = () => {
     }
   }, [isAccepted]);
 
-  // If the user tries to resize window, reset button potentially to avoid it being lost
+  // Reset on resize
   useEffect(() => {
     const handleResize = () => {
       setNoBtnPosition(null);
       setIsHoveringNo(false);
-      setNoBtnText(TEXTS.NO_BTN); // Reset text on resize/reset
+      setNoBtnText(TEXTS.NO_BTN);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -100,9 +73,10 @@ export const ValentineCard: React.FC = () => {
 
   return (
     <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden">
+      {/* Removed 'transform' class to ensure fixed positioning of child works relative to viewport */}
       <div 
         ref={cardRef}
-        className="flex flex-col items-center text-center transition-all duration-500 transform"
+        className="flex flex-col items-center text-center transition-all duration-500"
       >
         {/* Image Section */}
         <div className="relative w-48 h-48 md:w-64 md:h-64 mb-8 rounded-full overflow-hidden shadow-2xl border-4 border-white group">
@@ -151,7 +125,7 @@ export const ValentineCard: React.FC = () => {
               ref={noBtnRef}
               onMouseEnter={moveNoButton}
               onTouchStart={(e) => {
-                 e.preventDefault(); // Prevent accidental clicks on mobile
+                 e.preventDefault(); 
                  moveNoButton();
               }}
               onClick={moveNoButton}
@@ -159,9 +133,9 @@ export const ValentineCard: React.FC = () => {
                 noBtnPosition
                   ? {
                       position: 'fixed',
-                      left: noBtnPosition.x,
-                      top: noBtnPosition.y,
-                      transition: 'all 0.2s ease-out', 
+                      left: `${noBtnPosition.x}px`,
+                      top: `${noBtnPosition.y}px`,
+                      zIndex: 9999, // Ensure it's on top
                     }
                   : {
                       position: 'relative',
@@ -169,7 +143,7 @@ export const ValentineCard: React.FC = () => {
               }
               className={`
                 px-8 py-4 bg-white text-valentine-600 border-2 border-valentine-200 font-bold rounded-full text-xl shadow-xl 
-                z-50 cursor-pointer whitespace-nowrap touch-none
+                cursor-pointer whitespace-nowrap touch-none transition-all duration-200 ease-out
                 ${isHoveringNo ? '' : 'hover:bg-gray-50'}
               `}
             >
